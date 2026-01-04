@@ -1,0 +1,26 @@
+{
+    "bank_info": {
+        "name": "first bank",
+        "total_accounts": 1
+    },
+    "users": [
+        {
+            "name": "ilonze victor",
+            "user_id": "ilonze1212"
+        }
+    ],
+    "accounts": [
+        {
+            "account_number": "ACCILONZE1212001",
+            "user_id": "ilonze1212",
+            "balance": 100.0,
+            "transactions": [
+                {
+                    "type": "DEPOSIT",
+                    "amount": 100.0,
+                    "balance_after": 100.0
+                }
+            ]
+        }
+    ]
+}
