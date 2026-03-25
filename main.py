@@ -2,6 +2,11 @@
 main.py - Enhanced with authentication system
 """
 
+import os
+import sys
+# Ensure current directory is in search path for IDE discovery
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from bank import Bank
 from user import User
 from account import Account
@@ -125,6 +130,9 @@ def change_password_menu():
         print("❌ New passwords don't match")
         return
     
+    if not current_user:
+        return
+        
     success, message = auth_system.change_password(
         current_user.get_user_id(), 
         current_pass, 
@@ -261,7 +269,7 @@ def main():
                 print("❌ Please logout before registering new user.")
             else:
                 user, user_id = register_user()
-                if user:
+                if user and user_id:
                     # Create a default account for new user
                     account_num = f"ACC{user_id.upper()}001"
                     account = Account(account_num, user, 100.0)  # Start with $100
@@ -278,11 +286,17 @@ def main():
         
         # 4. Change Password
         elif choice == "4":
-            change_password_menu()
+            if current_user:
+                change_password_menu()
+            else:
+                print("❌ Please login first")
         
         # 5. Admin Dashboard
         elif choice == "5":
-            admin_dashboard()
+            if current_user:
+                admin_dashboard()
+            else:
+                print("❌ Please login first")
         
         # 6. Save Data
         elif choice == "6":
