@@ -17,8 +17,9 @@ import json
 import datetime
 
 # Global session variable
-current_user = None
-current_token = None
+from typing import Optional
+current_user: Optional['User'] = None
+current_token: Optional[str] = None
 
 def register_user():
     """Register new user with authentication"""
@@ -151,6 +152,10 @@ def admin_dashboard():
     global current_user, current_token
     
     # Check if user is admin
+    if current_token is None:
+        print("❌ No active session. Please login first.")
+        return
+    
     has_role, payload, message = require_role(current_token, "admin")
     if not has_role:
         print(f"❌ {message}")
@@ -273,7 +278,7 @@ def main():
                 if user and user_id:
                     # Create a default account for new user
                     account_num = f"ACC{user_id.upper()}001"
-                    account = Account(account_num, user, 100.0)  # Start with $100
+                    account = Account(account_num, user, 100)  # Start with $100
                     bank.add_account(account)
                     print(f"✅ Created account {account_num} with $100.00")
         
@@ -294,7 +299,7 @@ def main():
         
         # 5. Admin Dashboard
         elif choice == "5":
-            if current_user:
+            if current_user and current_token:
                 admin_dashboard()
             else:
                 print("❌ Please login first")
