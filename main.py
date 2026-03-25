@@ -13,6 +13,8 @@ from account import Account
 from storage import save_data, load_data, clear_data
 from auth import auth_system, require_auth, require_role, PasswordValidator
 import getpass
+import json
+import datetime
 
 # Global session variable
 current_user = None
@@ -202,7 +204,6 @@ def admin_dashboard():
                     print(f"✅ {user_id} unlocked")
                 else:
                     # Lock for 1 hour
-                    import datetime
                     creds['locked_until'] = datetime.datetime.now() + datetime.timedelta(hours=1)
                     print(f"🔒 {user_id} locked for 1 hour")
             else:
@@ -434,7 +435,5 @@ def banking_operations(bank, user, token):
             print("❌ Invalid option")
 
 if __name__ == "__main__":
-    # Import json for the view data option
-    import json
     main()
     
