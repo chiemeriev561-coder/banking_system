@@ -1,0 +1,14 @@
+<parameter name="content"># Banking System Pylance Error Fixes
+Status: In Progress
+
+## Steps:
+1. [ ] Setup virtual environment and install dependencies (pip install -r requirements.txt pytest pytest-asyncio)
+2. [ ] Update account.py: Change __init__ balance param to float = 0.0
+3. [ ] Update test_api.py: Remove duplicate plain setup_and_teardown() definition
+4. [ ] Update api/routers/accounts.py: Add typing imports and change payload: dict to Dict[str, Any]
+5. [ ] Update api/routers/admin.py: Add typing imports and change payload: dict to Dict[str, Any]
+6. [ ] Update api/routers/auth.py: Add typing imports and change payload: dict to Dict[str, Any]
+7. [ ] Update requirements.txt: Add pytest and pytest-asyncio
+8. [ ] Test: Run pytest test_api.py and uvicorn api.app:app --reload
+9. [ ] Verify no Pylance errors remain
+10. [ ] Complete task</parameter>

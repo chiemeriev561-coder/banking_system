@@ -1,47 +1,89 @@
-# Simple Banking System
+# Banking System API
 
-A basic Python banking system with users, accounts, and transactions whith Encapsulation and Validation with save and load functions.
+A REST API for a banking system with JWT authentication, user management, and account operations.
 
 ## 🎯 Key Features
-- **Bank management**: Create banks and manage accounts
-- **User accounts**: Create users with secure IDs
-- **Banking operations**: Deposit, withdraw, check balance
-- **Encapsulation**: Protected data with getter/setter methods
+- **REST API**: Full REST endpoints for banking operations
+- **JWT Authentication**: Secure token-based authentication with role-based access
+- **User Management**: Register users with different roles (customer, teller, manager, admin)
+- **Account Operations**: Deposit, withdraw, check balance, view statements
+- **Admin Functions**: User management, account locking/unlocking, password resets
+- **Data Persistence**: JSON-based storage with automatic saving
 
-## 🔒 Encapsulation Implementation
-All classes use **private attributes** (with `__` prefix) and **public methods**:
+## 🔒 Security Features
+- **JWT Tokens**: Bearer token authentication
+- **Role-Based Access**: Different permissions for customers, tellers, managers, and admins
+- **Password Security**: bcrypt hashing with strength validation
+- **Account Protection**: Failed attempt locking and admin controls
 
-### Account Class Example
-```python
-# PRIVATE attributes (can't access directly)
-self.__account_number
-self.__balance
+## 🚀 API Endpoints
 
-# PUBLIC methods (safe access)
-get_balance()      # Check balance
-deposit(amount)    # Add money (with validation)
-withdraw(amount)   # Remove money (checks funds)
+### Authentication
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - Login and get JWT token
+- `POST /auth/change-password` - Change password (authenticated)
+- `POST /auth/logout` - Logout (invalidate token)
 
+### Banking Operations (Authenticated)
+- `GET /me` - Get current user profile
+- `GET /api/accounts` - List user's accessible accounts
+- `GET /api/accounts/{account_number}` - Get account details
+- `POST /api/accounts/{account_number}/deposit` - Deposit money
+- `POST /api/accounts/{account_number}/withdraw` - Withdraw money
+- `GET /api/accounts/{account_number}/statement` - Get transaction history
 
-## 💾 Data Storage
-The system now includes **`storage.py`** for saving/loading data:
+### Admin Operations (Admin role required)
+- `GET /admin/users` - List all users with status
+- `POST /admin/users/{user_id}/lock` - Lock user account
+- `POST /admin/users/{user_id}/unlock` - Unlock user account
+- `POST /admin/users/{user_id}/reset-password` - Reset user password
 
-### Storage Features
-- **JSON-based storage**: All data saved in `bank_data.json`
-- **Automatic saving**: Save progress before exiting
-- **Data integrity**: Error handling for file operations
-- **Easy reset**: Clear all data with one command
+### System Operations
+- `GET /system/snapshot` - Get system statistics
+- `POST /system/save` - Save all data
+- `POST /system/clear` - Clear all data
 
-### How It Works
-```python
-# Save all data
-save_data(bank, users, accounts)
+## 💻 How to Run
 
-# Load saved data
-data = load_data()  # Returns dictionary or None
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-# Clear all data
-clear_data()
-## How to run:
-1. Open main.py
-2. Click the "Run" button (triangle icon)
+2. Start the API server:
+```bash
+uvicorn api.app:app --reload
+```
+
+3. Access the API documentation at: http://localhost:8000/docs
+
+## 🧪 Testing
+
+Run the test suite:
+```bash
+pytest test_api.py -v
+```
+
+## 📁 Project Structure
+
+```
+banking_system/
+├── api/
+│   ├── app.py              # FastAPI application
+│   ├── deps.py             # Authentication dependencies
+│   ├── schemas.py          # Pydantic models
+│   └── routers/
+│       ├── auth.py         # Authentication endpoints
+│       ├── accounts.py     # Banking operations
+│       └── admin.py        # Admin operations
+├── services/
+│   ├── auth_service.py     # Authentication business logic
+│   └── banking_service.py  # Banking business logic
+├── persistence/
+│   └── store.py            # Data persistence
+├── bank.py                 # Bank domain model
+├── account.py              # Account domain model
+├── user.py                 # User domain model
+├── auth.py                 # Authentication utilities
+└── test_api.py             # API tests
+```
