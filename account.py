@@ -1,10 +1,15 @@
+from typing import Any, Dict, List
+
+from user import User
+
+
 class Account:
-    def __init__(self, account_number, user, balance=0):
+    def __init__(self, account_number: str, user: User, balance: float = 0.0):
         # Private attributes
         self.__account_number = account_number
         self.__user = user
         self.__balance = balance
-        self.__transactions = []  # Track transaction history
+        self.__transactions: List[Dict[str, Any]] = []  # Track transaction history
         
         # Record initial deposit if starting balance > 0
         if balance > 0:
@@ -15,20 +20,20 @@ class Account:
             })
     
     # Getter methods
-    def get_account_number(self):
+    def get_account_number(self) -> str:
         return self.__account_number
     
-    def get_user(self):
+    def get_user(self) -> User:
         return self.__user
     
-    def get_balance(self):
+    def get_balance(self) -> float:
         return self.__balance
     
-    def get_transactions(self):
+    def get_transactions(self) -> List[Dict[str, Any]]:
         return self.__transactions.copy()  # Return copy for encapsulation
     
     # Banking methods
-    def deposit(self, amount):
+    def deposit(self, amount: float) -> bool:
         if amount > 0:
             self.__balance += amount
             self.__transactions.append({
@@ -39,7 +44,7 @@ class Account:
             return True
         return False
     
-    def withdraw(self, amount):
+    def withdraw(self, amount: float) -> bool:
         if 0 < amount <= self.__balance:
             self.__balance -= amount
             self.__transactions.append({
@@ -50,7 +55,7 @@ class Account:
             return True
         return False
     
-    def show_statement(self):
+    def show_statement(self) -> None:
         """Print transaction history"""
         print(f"\n📝 STATEMENT FOR ACCOUNT {self.__account_number}")
         print(f"Holder: {self.__user.get_name()}")

@@ -5,6 +5,9 @@ from auth import auth_system
 from persistence.store import save_data
 from typing import List, Optional, Dict, Any, Tuple
 
+STAFF_ROLES = {"admin", "manager", "teller"}
+
+
 class BankingService:
     """Service layer for banking operations"""
 
@@ -15,7 +18,7 @@ class BankingService:
         """Get accounts accessible to the current user"""
         all_accounts = self.bank.get_accounts()
 
-        if current_user_role in ['admin', 'manager', 'teller']:
+        if current_user_role in STAFF_ROLES:
             # Staff can see all accounts
             return all_accounts
         else:
@@ -30,7 +33,7 @@ class BankingService:
 
         # Check access permission
         account_user_id = account.get_user().get_user_id()
-        if current_user_role in ['admin', 'manager', 'teller'] or account_user_id == current_user_id:
+        if current_user_role in STAFF_ROLES or account_user_id == current_user_id:
             return account
 
         return None
@@ -44,7 +47,7 @@ class BankingService:
 
         # Check if deposit is allowed (staff can deposit to any account, customers only to own)
         account_user_id = account.get_user().get_user_id()
-        if current_user_role not in ['admin', 'manager', 'teller'] and account_user_id != current_user_id:
+        if current_user_role not in STAFF_ROLES and account_user_id != current_user_id:
             return False, "Access denied", None
 
         if account.deposit(amount):
@@ -62,7 +65,7 @@ class BankingService:
 
         # Check if withdrawal is allowed (staff can withdraw from any account, customers only from own)
         account_user_id = account.get_user().get_user_id()
-        if current_user_role not in ['admin', 'manager', 'teller'] and account_user_id != current_user_id:
+        if current_user_role not in STAFF_ROLES and account_user_id != current_user_id:
             return False, "Access denied", None
 
         if account.withdraw(amount):
@@ -79,10 +82,15 @@ class BankingService:
             return None
 
         transactions = account.get_transactions()
+        if limit <= 0:
+            return []
         return transactions[-limit:] if transactions else []
 
     def create_account(self, user: User, initial_balance: float = 0) -> Account:
         """Create new account for user (teller+ only)"""
+        if initial_balance < 0:
+            raise ValueError("Initial balance cannot be negative")
+
         # Generate account number
         user_id = user.get_user_id()
         account_num = f"ACC{user_id.upper()}001"

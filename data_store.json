@@ -1,0 +1,32 @@
+{
+    "bank": {
+        "name": "Test Bank",
+        "total_accounts": 1
+    },
+    "users": [
+        {
+            "name": "Test User",
+            "user_id": "testuser",
+            "role": "customer",
+            "email": null,
+            "phone": null
+        }
+    ],
+    "accounts": [
+        {
+            "account_number": "ACCTESTUSER001",
+            "user_id": "testuser",
+            "balance": 100.0,
+            "transactions": [
+                {
+                    "type": "DEPOSIT",
+                    "amount": 100.0,
+                    "balance_after": 100.0
+                }
+            ]
+        }
+    ],
+    "auth": {
+        "user_credentials": {}
+    }
+}

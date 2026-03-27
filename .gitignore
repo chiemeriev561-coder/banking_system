@@ -21,3 +21,4 @@ ENV/
 pyrightconfig.json
 setup.py
 bank_data.json
+.pytest_cache/
