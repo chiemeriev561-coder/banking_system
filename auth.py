@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 from persistence.models import UserDB, AuthDB
-from persistence.database import SessionLocal
 import bcrypt
 import jwt
 import datetime
@@ -74,17 +73,17 @@ class AuthSystem:
         
         return True, "User created successfully"
     
-    def login(self, db: Session, user_id: str, password: str) -> Tuple[bool, str, str]:
+    def login(self, db: Session, user_id: str, password: str) -> Tuple[bool, Optional[str], str]:
         user = db.query(UserDB).filter(UserDB.user_id == user_id).first()
         if not user or not user.auth:
-            return False, "", "Invalid credentials"
+            return False, None, "Invalid credentials"
         
         auth = user.auth
         
         # Check if account is locked
         if auth.locked_until and auth.locked_until > datetime.datetime.now():
             remaining = (auth.locked_until - datetime.datetime.now()).seconds // 60
-            return False, "", f"Account locked. Try again in {remaining} minutes"
+            return False, None, f"Account locked. Try again in {remaining} minutes"
         
         # Verify password
         if self.verify_password(password, auth.password_hash):
@@ -98,7 +97,7 @@ class AuthSystem:
                 {
                     'user_id': user_id, 
                     'role': str(user.role),
-                    'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+                    'exp': datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=24)
                 },
                 self.SECRET_KEY,
                 algorithm='HS256'
@@ -111,30 +110,36 @@ class AuthSystem:
             if auth.failed_attempts >= 5:
                 auth.locked_until = datetime.datetime.now() + datetime.timedelta(minutes=15)
                 db.commit()
-                return False, "", "Account locked due to 5 failed attempts"
+                return False, None, "Account locked due to 5 failed attempts"
             
             db.commit()
             remaining = 5 - auth.failed_attempts
-            return False, "", f"Invalid password. {remaining} attempts remaining"
+            return False, None, f"Invalid password. {remaining} attempts remaining"
 
     def logout(self, token: str):
         # JWT logout is usually handled client side or with a distributed blacklist
         # For simplicity, we'll just ignore it here since payload check is enough
         pass
 
-    def change_password(self, db: Session, user_id: str, old_pass: str, new_pass: str) -> Tuple[bool, str]:
+    def change_password(
+        self,
+        db: Session,
+        user_id: str,
+        current_password: str,
+        new_password: str,
+    ) -> Tuple[bool, str]:
         user = db.query(UserDB).filter(UserDB.user_id == user_id).first()
         if not user or not user.auth:
             return False, "User not found"
         
-        if not self.verify_password(old_pass, user.auth.password_hash):
+        if not self.verify_password(current_password, user.auth.password_hash):
             return False, "Incorrect current password"
         
-        is_valid, message = PasswordValidator.validate(new_pass)
+        is_valid, message = PasswordValidator.validate(new_password)
         if not is_valid:
             return False, message
             
-        user.auth.password_hash = self.hash_password(new_pass)
+        user.auth.password_hash = self.hash_password(new_password)
         db.commit()
         return True, "Password changed successfully"
 

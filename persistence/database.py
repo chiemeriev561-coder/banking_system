@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 
 # SQLite database URL
@@ -18,8 +17,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base class for models
 Base = declarative_base()
 
-def get_db():
-    """Dependency for getting DB session"""
+async def get_db():
+    """Async dependency for getting DB session."""
     db = SessionLocal()
     try:
         yield db

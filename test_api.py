@@ -1,3 +1,4 @@
+import asyncio
 import httpx
 import pytest
 from sqlalchemy import create_engine
@@ -5,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from api.app import app
+from api.routers.accounts import get_account_detail, get_account_statement
 from persistence.database import Base, get_db
 from persistence.models import UserDB, AccountDB, TransactionDB, AuthDB
 from services.banking_service import BankingService
@@ -20,7 +22,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def override_get_db():
+async def override_get_db():
     db = TestingSessionLocal()
     try:
         yield db
@@ -228,7 +230,7 @@ def test_get_account_statement_zero_limit_returns_empty_list():
 
         statement = service.get_account_statement(
             account.account_number,
-            current_user_id_str="testuser",
+            current_user_id="testuser",
             current_user_role="customer",
             limit=0,
         )
@@ -251,3 +253,52 @@ def test_create_account_rejects_negative_initial_balance():
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
+
+def test_get_account_statement_includes_timestamps():
+    """Statement responses should preserve transaction timestamps."""
+    db = TestingSessionLocal()
+    Base.metadata.create_all(bind=engine)
+    try:
+        service = BankingService(db)
+        auth_service.register_user(db, "Test User", "testuser", "Password123!")
+        account = service.create_account("testuser", initial_balance=100.0)
+        service.deposit_to_account(account.account_number, 25.0, "testuser", "customer")
+
+        statement = asyncio.run(
+            get_account_statement(
+                account.account_number,
+                limit=10,
+                payload={"user_id": "testuser", "role": "customer"},
+                db=db,
+            )
+        )
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)
+
+    assert statement
+    assert statement[0].timestamp
+
+def test_get_account_detail_includes_transaction_timestamps():
+    """Account detail responses should include timestamps on nested transactions."""
+    db = TestingSessionLocal()
+    Base.metadata.create_all(bind=engine)
+    try:
+        service = BankingService(db)
+        auth_service.register_user(db, "Test User", "testuser", "Password123!")
+        account = service.create_account("testuser", initial_balance=100.0)
+        service.deposit_to_account(account.account_number, 25.0, "testuser", "customer")
+
+        detail = asyncio.run(
+            get_account_detail(
+                account.account_number,
+                payload={"user_id": "testuser", "role": "customer"},
+                db=db,
+            )
+        )
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)
+
+    assert detail.transactions
+    assert detail.transactions[0].timestamp

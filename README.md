@@ -80,7 +80,8 @@ banking_system/
 │   ├── auth_service.py     # Authentication business logic
 │   └── banking_service.py  # Banking business logic
 ├── persistence/
-│   └── store.py            # Data persistence
+│   ├── database.py         # SQLAlchemy engine/session setup
+│   └── models.py           # Database models
 ├── bank.py                 # Bank domain model
 ├── account.py              # Account domain model
 ├── user.py                 # User domain model

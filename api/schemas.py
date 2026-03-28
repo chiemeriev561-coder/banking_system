@@ -40,6 +40,7 @@ class Transaction(BaseModel):
     type: str
     amount: float
     balance_after: float
+    timestamp: str
 
 class AccountDetail(BaseModel):
     account_number: str

@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from persistence.models import UserDB, AccountDB, TransactionDB, AuthDB
 from typing import List, Optional, Dict, Any, Tuple
-import datetime
 
 STAFF_ROLES = {"admin", "manager", "teller"}
 
@@ -12,34 +11,44 @@ class BankingService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_user_accounts(self, user_id_str: str, current_user_role: str) -> List[AccountDB]:
+    def get_user_accounts(self, user_id: str, current_user_role: str) -> List[AccountDB]:
         """Get accounts accessible to the current user"""
         if current_user_role in STAFF_ROLES:
             # Staff can see all accounts
             return self.db.query(AccountDB).all()
         else:
             # Customers can only see their own accounts
-            user = self.db.query(UserDB).filter(UserDB.user_id == user_id_str).first()
+            user = self.db.query(UserDB).filter(UserDB.user_id == user_id).first()
             if not user:
                 return []
             return user.accounts
 
-    def get_account_detail(self, account_number: str, current_user_id_str: str, current_user_role: str) -> Optional[AccountDB]:
+    def get_account_detail(
+        self,
+        account_number: str,
+        current_user_id: str,
+        current_user_role: str,
+    ) -> Optional[AccountDB]:
         """Get detailed account info if user has access"""
         account = self.db.query(AccountDB).filter(AccountDB.account_number == account_number).first()
         if not account:
             return None
 
         # Check access permission
-        if current_user_role in STAFF_ROLES or account.owner.user_id == current_user_id_str:
+        if current_user_role in STAFF_ROLES or account.owner.user_id == current_user_id:
             return account
 
         return None
 
-    def deposit_to_account(self, account_number: str, amount: float,
-                          current_user_id_str: str, current_user_role: str) -> Tuple[bool, str, Optional[float]]:
+    def deposit_to_account(
+        self,
+        account_number: str,
+        amount: float,
+        current_user_id: str,
+        current_user_role: str,
+    ) -> Tuple[bool, str, Optional[float]]:
         """Deposit money to account if user has permission"""
-        account = self.get_account_detail(account_number, current_user_id_str, current_user_role)
+        account = self.get_account_detail(account_number, current_user_id, current_user_role)
         if not account:
             return False, "Account not found or access denied", None
 
@@ -61,10 +70,15 @@ class BankingService:
         
         return True, "Deposit successful", account.balance
 
-    def withdraw_from_account(self, account_number: str, amount: float,
-                             current_user_id_str: str, current_user_role: str) -> Tuple[bool, str, Optional[float]]:
+    def withdraw_from_account(
+        self,
+        account_number: str,
+        amount: float,
+        current_user_id: str,
+        current_user_role: str,
+    ) -> Tuple[bool, str, Optional[float]]:
         """Withdraw money from account if user has permission"""
-        account = self.get_account_detail(account_number, current_user_id_str, current_user_role)
+        account = self.get_account_detail(account_number, current_user_id, current_user_role)
         if not account:
             return False, "Account not found or access denied", None
 
@@ -89,10 +103,15 @@ class BankingService:
         
         return True, "Withdrawal successful", account.balance
 
-    def get_account_statement(self, account_number: str, current_user_id_str: str,
-                             current_user_role: str, limit: int = 10) -> Optional[List[Dict[str, Any]]]:
+    def get_account_statement(
+        self,
+        account_number: str,
+        current_user_id: str,
+        current_user_role: str,
+        limit: int = 10,
+    ) -> Optional[List[Dict[str, Any]]]:
         """Get recent transactions for account"""
-        account = self.get_account_detail(account_number, current_user_id_str, current_user_role)
+        account = self.get_account_detail(account_number, current_user_id, current_user_role)
         if not account:
             return None
 
@@ -111,23 +130,23 @@ class BankingService:
             } for t in transactions
         ]
 
-    def create_account(self, user_id_str: str, initial_balance: float = 0) -> AccountDB:
+    def create_account(self, user_id: str, initial_balance: float = 0) -> AccountDB:
         """Create new account for user (teller+ only)"""
         if initial_balance < 0:
             raise ValueError("Initial balance cannot be negative")
 
-        user = self.db.query(UserDB).filter(UserDB.user_id == user_id_str).first()
+        user = self.db.query(UserDB).filter(UserDB.user_id == user_id).first()
         if not user:
-            raise ValueError(f"User {user_id_str} not found")
+            raise ValueError(f"User {user_id} not found")
 
         # Generate account number
-        account_num = f"ACC{user_id_str.upper()}001"
+        account_num = f"ACC{user_id.upper()}001"
 
         # Ensure unique account number
         counter = 1
         while self.db.query(AccountDB).filter(AccountDB.account_number == account_num).first():
             counter += 1
-            account_num = f"ACC{user_id_str.upper()}{counter:03d}"
+            account_num = f"ACC{user_id.upper()}{counter:03d}"
 
         account = AccountDB(
             account_number=account_num,
