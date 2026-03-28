@@ -1,125 +1,165 @@
-from bank import Bank
-from account import Account
-from user import User
-from auth import auth_system
-from persistence.store import save_data
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from persistence.models import UserDB, AccountDB, TransactionDB, AuthDB
 from typing import List, Optional, Dict, Any, Tuple
+import datetime
 
 STAFF_ROLES = {"admin", "manager", "teller"}
-
 
 class BankingService:
     """Service layer for banking operations"""
 
-    def __init__(self, bank: Bank):
-        self.bank = bank
+    def __init__(self, db: Session):
+        self.db = db
 
-    def get_user_accounts(self, user_id: str, current_user_role: str) -> List[Account]:
+    def get_user_accounts(self, user_id_str: str, current_user_role: str) -> List[AccountDB]:
         """Get accounts accessible to the current user"""
-        all_accounts = self.bank.get_accounts()
-
         if current_user_role in STAFF_ROLES:
             # Staff can see all accounts
-            return all_accounts
+            return self.db.query(AccountDB).all()
         else:
             # Customers can only see their own accounts
-            return [acc for acc in all_accounts if acc.get_user().get_user_id() == user_id]
+            user = self.db.query(UserDB).filter(UserDB.user_id == user_id_str).first()
+            if not user:
+                return []
+            return user.accounts
 
-    def get_account_detail(self, account_number: str, current_user_id: str, current_user_role: str) -> Optional[Account]:
+    def get_account_detail(self, account_number: str, current_user_id_str: str, current_user_role: str) -> Optional[AccountDB]:
         """Get detailed account info if user has access"""
-        account = self.bank.find_account(account_number)
+        account = self.db.query(AccountDB).filter(AccountDB.account_number == account_number).first()
         if not account:
             return None
 
         # Check access permission
-        account_user_id = account.get_user().get_user_id()
-        if current_user_role in STAFF_ROLES or account_user_id == current_user_id:
+        if current_user_role in STAFF_ROLES or account.owner.user_id == current_user_id_str:
             return account
 
         return None
 
     def deposit_to_account(self, account_number: str, amount: float,
-                          current_user_id: str, current_user_role: str) -> Tuple[bool, str, Optional[float]]:
+                          current_user_id_str: str, current_user_role: str) -> Tuple[bool, str, Optional[float]]:
         """Deposit money to account if user has permission"""
-        account = self.get_account_detail(account_number, current_user_id, current_user_role)
+        account = self.get_account_detail(account_number, current_user_id_str, current_user_role)
         if not account:
             return False, "Account not found or access denied", None
 
-        # Check if deposit is allowed (staff can deposit to any account, customers only to own)
-        account_user_id = account.get_user().get_user_id()
-        if current_user_role not in STAFF_ROLES and account_user_id != current_user_id:
-            return False, "Access denied", None
-
-        if account.deposit(amount):
-            save_data(self.bank)  # Persist changes
-            return True, "Deposit successful", account.get_balance()
-        else:
+        if amount <= 0:
             return False, "Invalid deposit amount", None
 
+        # Update balance
+        account.balance += amount
+        
+        # Record transaction
+        transaction = TransactionDB(
+            account_id=account.id,
+            type="DEPOSIT",
+            amount=amount,
+            balance_after=account.balance
+        )
+        self.db.add(transaction)
+        self.db.commit()
+        
+        return True, "Deposit successful", account.balance
+
     def withdraw_from_account(self, account_number: str, amount: float,
-                             current_user_id: str, current_user_role: str) -> Tuple[bool, str, Optional[float]]:
+                             current_user_id_str: str, current_user_role: str) -> Tuple[bool, str, Optional[float]]:
         """Withdraw money from account if user has permission"""
-        account = self.get_account_detail(account_number, current_user_id, current_user_role)
+        account = self.get_account_detail(account_number, current_user_id_str, current_user_role)
         if not account:
             return False, "Account not found or access denied", None
 
-        # Check if withdrawal is allowed (staff can withdraw from any account, customers only from own)
-        account_user_id = account.get_user().get_user_id()
-        if current_user_role not in STAFF_ROLES and account_user_id != current_user_id:
-            return False, "Access denied", None
+        if amount <= 0:
+            return False, "Invalid withdrawal amount", None
+            
+        if account.balance < amount:
+            return False, "Insufficient funds", None
 
-        if account.withdraw(amount):
-            save_data(self.bank)  # Persist changes
-            return True, "Withdrawal successful", account.get_balance()
-        else:
-            return False, "Insufficient funds or invalid amount", None
+        # Update balance
+        account.balance -= amount
+        
+        # Record transaction
+        transaction = TransactionDB(
+            account_id=account.id,
+            type="WITHDRAWAL",
+            amount=amount,
+            balance_after=account.balance
+        )
+        self.db.add(transaction)
+        self.db.commit()
+        
+        return True, "Withdrawal successful", account.balance
 
-    def get_account_statement(self, account_number: str, current_user_id: str,
+    def get_account_statement(self, account_number: str, current_user_id_str: str,
                              current_user_role: str, limit: int = 10) -> Optional[List[Dict[str, Any]]]:
         """Get recent transactions for account"""
-        account = self.get_account_detail(account_number, current_user_id, current_user_role)
+        account = self.get_account_detail(account_number, current_user_id_str, current_user_role)
         if not account:
             return None
 
-        transactions = account.get_transactions()
-        if limit <= 0:
-            return []
-        return transactions[-limit:] if transactions else []
+        transactions = self.db.query(TransactionDB)\
+            .filter(TransactionDB.account_id == account.id)\
+            .order_by(TransactionDB.timestamp.desc())\
+            .limit(limit)\
+            .all()
+            
+        return [
+            {
+                "type": t.type,
+                "amount": t.amount,
+                "balance_after": t.balance_after,
+                "timestamp": t.timestamp.isoformat()
+            } for t in transactions
+        ]
 
-    def create_account(self, user: User, initial_balance: float = 0) -> Account:
+    def create_account(self, user_id_str: str, initial_balance: float = 0) -> AccountDB:
         """Create new account for user (teller+ only)"""
         if initial_balance < 0:
             raise ValueError("Initial balance cannot be negative")
 
+        user = self.db.query(UserDB).filter(UserDB.user_id == user_id_str).first()
+        if not user:
+            raise ValueError(f"User {user_id_str} not found")
+
         # Generate account number
-        user_id = user.get_user_id()
-        account_num = f"ACC{user_id.upper()}001"
+        account_num = f"ACC{user_id_str.upper()}001"
 
         # Ensure unique account number
-        existing_nums = [acc.get_account_number() for acc in self.bank.get_accounts()]
         counter = 1
-        while account_num in existing_nums:
+        while self.db.query(AccountDB).filter(AccountDB.account_number == account_num).first():
             counter += 1
-            account_num = f"ACC{user_id.upper()}{counter:03d}"
+            account_num = f"ACC{user_id_str.upper()}{counter:03d}"
 
-        account = Account(account_num, user, initial_balance)
-        self.bank.add_account(account)
-        save_data(self.bank)  # Persist changes
-
+        account = AccountDB(
+            account_number=account_num,
+            user_id=user.id,
+            balance=initial_balance
+        )
+        self.db.add(account)
+        self.db.flush()
+        
+        if initial_balance > 0:
+            transaction = TransactionDB(
+                account_id=account.id,
+                type="DEPOSIT",
+                amount=initial_balance,
+                balance_after=initial_balance
+            )
+            self.db.add(transaction)
+            
+        self.db.commit()
         return account
 
     def get_system_snapshot(self) -> Dict[str, Any]:
         """Get system-wide statistics"""
-        accounts = self.bank.get_accounts()
-        total_balance = sum(acc.get_balance() for acc in accounts)
-
-        # Count unique users
-        user_ids = set(acc.get_user().get_user_id() for acc in accounts)
+        total_accounts = self.db.query(AccountDB).count()
+        total_balance = self.db.query(func.sum(AccountDB.balance)).scalar() or 0.0
+        total_users = self.db.query(UserDB).count()
+        auth_users = self.db.query(AuthDB).count()
 
         return {
-            'bank_name': self.bank.get_name(),
-            'total_users': len(user_ids),
-            'total_accounts': len(accounts),
+            'bank_name': "Secure Bank (SQLite)",
+            'total_users': total_users,
+            'total_accounts': total_accounts,
             'total_balance': total_balance,
-            'auth_users': len(auth_system.user_credentials)
+            'auth_users': auth_users
         }

@@ -1,3 +1,6 @@
+from sqlalchemy.orm import Session
+from persistence.models import UserDB, AuthDB
+from persistence.database import SessionLocal
 import bcrypt
 import jwt
 import datetime
@@ -23,21 +26,24 @@ class PasswordValidator:
 class AuthSystem:
     """Authentication system using JWT and bcrypt"""
     def __init__(self):
-        self.user_credentials: Dict[str, Dict[str, Any]] = {}
-        self.active_sessions: Dict[str, Dict[str, str]] = {}
         self.SECRET_KEY = "super-secret-bank-key-123" # In production, use environment variable
     
-    def hash_password(self, password: str) -> bytes:
-        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    def hash_password(self, password: str) -> str:
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
-    def verify_password(self, password: str, hashed: bytes) -> bool:
+    def verify_password(self, password: str, hashed: str) -> bool:
         try:
-            return bcrypt.checkpw(password.encode('utf-8'), hashed)
+            return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
         except:
             return False
     
-    def create_user(self, user_id: str, password: str, require_strong_password: bool = True) -> Tuple[bool, str]:
-        if user_id in self.user_credentials:
+    def create_user(self, db: Session, name: str, user_id: str, password: str, role: str = "customer", 
+                    email: Optional[str] = None, phone: Optional[str] = None, 
+                    require_strong_password: bool = True) -> Tuple[bool, str]:
+        
+        # Check if user already exists
+        existing_user = db.query(UserDB).filter(UserDB.user_id == user_id).first()
+        if existing_user:
             return False, "User already exists"
         
         if require_strong_password:
@@ -46,72 +52,90 @@ class AuthSystem:
                 return False, f"Weak password: {message}"
         
         password_hash = self.hash_password(password)
-        self.user_credentials[user_id] = {
-            'password_hash': password_hash,
-            'failed_attempts': 0,
-            'locked_until': None,
-            'role': 'customer' # Default role
-        }
+        
+        # Create user record
+        new_user = UserDB(
+            user_id=user_id,
+            name=name,
+            role=role,
+            email=email,
+            phone=phone
+        )
+        db.add(new_user)
+        db.flush() # Get user id for auth record
+        
+        # Create auth record
+        new_auth = AuthDB(
+            user_id=new_user.id,
+            password_hash=password_hash
+        )
+        db.add(new_auth)
+        db.commit()
+        
         return True, "User created successfully"
     
-    def login(self, user_id: str, password: str) -> Tuple[bool, str, str]:
-        if user_id not in self.user_credentials:
+    def login(self, db: Session, user_id: str, password: str) -> Tuple[bool, str, str]:
+        user = db.query(UserDB).filter(UserDB.user_id == user_id).first()
+        if not user or not user.auth:
             return False, "", "Invalid credentials"
         
-        credentials = self.user_credentials[user_id]
+        auth = user.auth
         
         # Check if account is locked
-        locked_until = credentials.get('locked_until')
-        if isinstance(locked_until, datetime.datetime) and locked_until > datetime.datetime.now():
-            remaining = (locked_until - datetime.datetime.now()).seconds // 60
+        if auth.locked_until and auth.locked_until > datetime.datetime.now():
+            remaining = (auth.locked_until - datetime.datetime.now()).seconds // 60
             return False, "", f"Account locked. Try again in {remaining} minutes"
         
         # Verify password
-        password_hash = credentials.get('password_hash')
-        if isinstance(password_hash, bytes) and self.verify_password(password, password_hash):
+        if self.verify_password(password, auth.password_hash):
             # Successful login - reset failed attempts and clear any lock
-            credentials['failed_attempts'] = 0
-            credentials['locked_until'] = None
+            auth.failed_attempts = 0
+            auth.locked_until = None
+            db.commit()
             
             # Create JWT token
             token = jwt.encode(
                 {
                     'user_id': user_id, 
-                    'role': str(credentials.get('role', 'customer')),
+                    'role': str(user.role),
                     'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
                 },
                 self.SECRET_KEY,
                 algorithm='HS256'
             )
-            self.active_sessions[token] = {'user_id': user_id}
             return True, token, "Login successful"
         else:
             # Failed login
-            failed_attempts = int(credentials.get('failed_attempts', 0)) + 1
-            credentials['failed_attempts'] = failed_attempts
+            auth.failed_attempts += 1
             
-            if failed_attempts >= 5:
-                credentials['locked_until'] = datetime.datetime.now() + datetime.timedelta(minutes=15)
+            if auth.failed_attempts >= 5:
+                auth.locked_until = datetime.datetime.now() + datetime.timedelta(minutes=15)
+                db.commit()
                 return False, "", "Account locked due to 5 failed attempts"
             
-            remaining = 5 - failed_attempts
+            db.commit()
+            remaining = 5 - auth.failed_attempts
             return False, "", f"Invalid password. {remaining} attempts remaining"
 
     def logout(self, token: str):
-        self.active_sessions.pop(token, None)
+        # JWT logout is usually handled client side or with a distributed blacklist
+        # For simplicity, we'll just ignore it here since payload check is enough
+        pass
 
-    def change_password(self, user_id: str, old_pass: str, new_pass: str) -> Tuple[bool, str]:
-        if user_id not in self.user_credentials:
+    def change_password(self, db: Session, user_id: str, old_pass: str, new_pass: str) -> Tuple[bool, str]:
+        user = db.query(UserDB).filter(UserDB.user_id == user_id).first()
+        if not user or not user.auth:
             return False, "User not found"
         
-        if not self.verify_password(old_pass, self.user_credentials[user_id]['password_hash']):
+        if not self.verify_password(old_pass, user.auth.password_hash):
             return False, "Incorrect current password"
         
         is_valid, message = PasswordValidator.validate(new_pass)
         if not is_valid:
             return False, message
             
-        self.user_credentials[user_id]['password_hash'] = self.hash_password(new_pass)
+        user.auth.password_hash = self.hash_password(new_pass)
+        db.commit()
         return True, "Password changed successfully"
 
 # Global singleton instance

@@ -1,47 +1,38 @@
 from fastapi import APIRouter, HTTPException, status, Depends
+from sqlalchemy.orm import Session
 from api.schemas import (
     UserProfile, AccountSummary, AccountDetail,
     DepositWithdrawRequest, Transaction
 )
 from api.deps import get_current_user
 from services.banking_service import BankingService
-from bank import Bank
-from persistence.store import load_data
+from persistence.database import get_db
+from persistence.models import UserDB
 from typing import List, Optional
 
 router = APIRouter()
 
-# Global bank instance (in production, use dependency injection)
-_bank: Optional[Bank] = None
-
-def get_bank() -> Bank:
-    """Get or create bank instance"""
-    global _bank
-    if _bank is None:
-        _bank = load_data() or Bank("Secure Bank")
-    return _bank
-
-def get_banking_service() -> BankingService:
-    """Get banking service instance"""
-    return BankingService(get_bank())
-
 @router.get("/me", response_model=UserProfile)
-async def get_current_user_profile(payload: dict = Depends(get_current_user)):
+async def get_current_user_profile(payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get current user profile"""
-    # In a full implementation, you'd fetch user details from database
-    # For now, return basic info from token
+    user_id = payload['user_id']
+    user = db.query(UserDB).filter(UserDB.user_id == user_id).first()
+    
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
     return UserProfile(
-        name=payload.get('user_id', '').capitalize(),  # Placeholder
-        user_id=payload['user_id'],
-        role=payload.get('role', 'customer'),
-        email=None,  # Would come from user store
-        phone=None   # Would come from user store
+        name=user.name,
+        user_id=user.user_id,
+        role=user.role,
+        email=user.email,
+        phone=user.phone
     )
 
 @router.get("/accounts", response_model=List[AccountSummary])
-async def get_accounts(payload: dict = Depends(get_current_user)):
+async def get_accounts(payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get accounts accessible to current user"""
-    banking_service = get_banking_service()
+    banking_service = BankingService(db)
     user_id = payload['user_id']
     user_role = payload.get('role', 'customer')
 
@@ -49,17 +40,17 @@ async def get_accounts(payload: dict = Depends(get_current_user)):
 
     return [
         AccountSummary(
-            account_number=acc.get_account_number(),
-            balance=acc.get_balance(),
-            user_id=acc.get_user().get_user_id()
+            account_number=acc.account_number,
+            balance=acc.balance,
+            user_id=acc.owner.user_id
         )
         for acc in accounts
     ]
 
 @router.get("/accounts/{account_number}", response_model=AccountDetail)
-async def get_account_detail(account_number: str, payload: dict = Depends(get_current_user)):
+async def get_account_detail(account_number: str, payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get detailed account information"""
-    banking_service = get_banking_service()
+    banking_service = BankingService(db)
     user_id = payload['user_id']
     user_role = payload.get('role', 'customer')
 
@@ -72,18 +63,19 @@ async def get_account_detail(account_number: str, payload: dict = Depends(get_cu
 
     transactions = [
         Transaction(
-            type=txn['type'],
-            amount=txn['amount'],
-            balance_after=txn['balance_after']
+            type=txn.type,
+            amount=txn.amount,
+            balance_after=txn.balance_after,
+            timestamp=txn.timestamp.isoformat()
         )
-        for txn in account.get_transactions()[-10:]  # Last 10 transactions
+        for txn in account.transactions[-10:]  # Last 10 transactions
     ]
 
     return AccountDetail(
-        account_number=account.get_account_number(),
-        balance=account.get_balance(),
-        user_id=account.get_user().get_user_id(),
-        user_name=account.get_user().get_name(),
+        account_number=account.account_number,
+        balance=account.balance,
+        user_id=account.owner.user_id,
+        user_name=account.owner.name,
         transactions=transactions
     )
 
@@ -91,10 +83,11 @@ async def get_account_detail(account_number: str, payload: dict = Depends(get_cu
 async def deposit_to_account(
     account_number: str,
     request: DepositWithdrawRequest,
-    payload: dict = Depends(get_current_user)
+    payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Deposit money to account"""
-    banking_service = get_banking_service()
+    banking_service = BankingService(db)
     user_id = payload['user_id']
     user_role = payload.get('role', 'customer')
 
@@ -114,10 +107,11 @@ async def deposit_to_account(
 async def withdraw_from_account(
     account_number: str,
     request: DepositWithdrawRequest,
-    payload: dict = Depends(get_current_user)
+    payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Withdraw money from account"""
-    banking_service = get_banking_service()
+    banking_service = BankingService(db)
     user_id = payload['user_id']
     user_role = payload.get('role', 'customer')
 
@@ -137,10 +131,11 @@ async def withdraw_from_account(
 async def get_account_statement(
     account_number: str,
     limit: int = 10,
-    payload: dict = Depends(get_current_user)
+    payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Get account transaction statement"""
-    banking_service = get_banking_service()
+    banking_service = BankingService(db)
     user_id = payload['user_id']
     user_role = payload.get('role', 'customer')
 
@@ -158,7 +153,8 @@ async def get_account_statement(
         Transaction(
             type=txn['type'],
             amount=txn['amount'],
-            balance_after=txn['balance_after']
+            balance_after=txn['balance_after'],
+            timestamp=txn['timestamp']
         )
         for txn in transactions
     ]

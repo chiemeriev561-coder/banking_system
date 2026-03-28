@@ -1,13 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from api.routers.auth import router as auth_router
 from api.routers.accounts import router as accounts_router
 from api.routers.admin import router as admin_router
 from api.schemas import SystemSnapshot
 from services.banking_service import BankingService
-from bank import Bank
-from persistence.store import load_data, save_data, clear_data
+from persistence.database import engine, Base, get_db
 from typing import Optional
+
+# Initialize database tables
+Base.metadata.create_all(bind=engine)
 
 # Create FastAPI app
 app = FastAPI(
@@ -24,16 +27,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Global bank instance
-_bank: Optional[Bank] = None
-
-def get_bank() -> Bank:
-    """Get or create bank instance"""
-    global _bank
-    if _bank is None:
-        _bank = load_data() or Bank("Secure Bank")
-    return _bank
 
 # Include routers
 app.include_router(
@@ -56,39 +49,17 @@ app.include_router(
 
 # System endpoints
 @app.get("/system/snapshot", response_model=SystemSnapshot)
-async def get_system_snapshot():
+async def get_system_snapshot(db: Session = Depends(get_db)):
     """Get system-wide statistics"""
-    bank = get_bank()
-    banking_service = BankingService(bank)
+    banking_service = BankingService(db)
     return banking_service.get_system_snapshot()
-
-@app.post("/system/save")
-async def save_system_data():
-    """Save all system data"""
-    bank = get_bank()
-    success = save_data(bank)
-    if success:
-        return {"message": "Data saved successfully"}
-    else:
-        return {"error": "Failed to save data"}
-
-@app.post("/system/clear")
-async def clear_system_data():
-    """Clear all system data (dangerous!)"""
-    global _bank
-    success = clear_data()
-    if success:
-        _bank = Bank("Fresh Bank")  # Reset to fresh bank
-        return {"message": "All data cleared"}
-    else:
-        return {"message": "No data to clear"}
 
 # Root endpoint
 @app.get("/")
 async def root():
     """API root endpoint"""
     return {
-        "message": "Banking System API",
+        "message": "Banking System API (SQLite)",
         "version": "1.0.0",
         "docs": "/docs",
         "redoc": "/redoc"
