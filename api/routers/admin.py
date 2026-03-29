@@ -18,12 +18,12 @@ async def get_all_users(payload: dict = Depends(require_admin), db: Session = De
     # Get all users from database
     users = db.query(UserDB).all()
     for user in users:
-        status_info = auth_service.get_user_status(db, user.user_id)
+        status_info = auth_service.get_user_status(db, str(user.user_id))
         if status_info:
             users_status.append(UserStatus(
-                user_id=user.user_id,
-                name=user.name,
-                role=user.role,
+                user_id=str(user.user_id),
+                name=str(user.name),
+                role=str(user.role),
                 locked=status_info['locked'],
                 failed_attempts=status_info['failed_attempts']
             ))

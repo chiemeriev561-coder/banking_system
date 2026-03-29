@@ -16,7 +16,7 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 class LoginResponse(BaseModel):
-    access_token: str
+    access_token: Optional[str] = None
     token_type: str = "bearer"
 
 class ChangePasswordRequest(BaseModel):
@@ -61,7 +61,7 @@ class UserStatus(BaseModel):
     failed_attempts: int
 
 class ResetPasswordResponse(BaseModel):
-    temporary_password: str
+    temporary_password: Optional[str] = None
 
 # System schemas
 class SystemSnapshot(BaseModel):

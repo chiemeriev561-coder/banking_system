@@ -33,11 +33,11 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     account = banking_service.create_account(request.user_id, initial_balance=100.0)
 
     return UserProfile(
-        name=request.name,
-        user_id=request.user_id,
-        role=request.role or "customer",
-        email=request.email,
-        phone=request.phone
+        name=str(request.name),
+        user_id=str(request.user_id),
+        role=str(request.role or "customer"),
+        email=str(request.email) if request.email else None,
+        phone=str(request.phone) if request.phone else None
     )
 
 @router.post("/login", response_model=LoginResponse)

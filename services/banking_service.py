@@ -1,9 +1,11 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from persistence.models import UserDB, AccountDB, TransactionDB, AuthDB
+
 from typing import List, Optional, Dict, Any, Tuple
 
 STAFF_ROLES = {"admin", "manager", "teller"}
+
 
 class BankingService:
     """Service layer for banking operations"""
@@ -23,12 +25,7 @@ class BankingService:
                 return []
             return user.accounts
 
-    def get_account_detail(
-        self,
-        account_number: str,
-        current_user_id: str,
-        current_user_role: str,
-    ) -> Optional[AccountDB]:
+    def get_account_detail(self, account_number: str, current_user_id: str, current_user_role: str) -> Optional[AccountDB]:
         """Get detailed account info if user has access"""
         account = self.db.query(AccountDB).filter(AccountDB.account_number == account_number).first()
         if not account:
@@ -40,13 +37,8 @@ class BankingService:
 
         return None
 
-    def deposit_to_account(
-        self,
-        account_number: str,
-        amount: float,
-        current_user_id: str,
-        current_user_role: str,
-    ) -> Tuple[bool, str, Optional[float]]:
+    def deposit_to_account(self, account_number: str, amount: float,
+                          current_user_id: str, current_user_role: str) -> Tuple[bool, str, Optional[float]]:
         """Deposit money to account if user has permission"""
         account = self.get_account_detail(account_number, current_user_id, current_user_role)
         if not account:
@@ -63,20 +55,15 @@ class BankingService:
             account_id=account.id,
             type="DEPOSIT",
             amount=amount,
-            balance_after=account.balance
+            balance_after=float(account.balance)
         )
         self.db.add(transaction)
         self.db.commit()
         
-        return True, "Deposit successful", account.balance
+        return True, "Deposit successful", float(account.balance)
 
-    def withdraw_from_account(
-        self,
-        account_number: str,
-        amount: float,
-        current_user_id: str,
-        current_user_role: str,
-    ) -> Tuple[bool, str, Optional[float]]:
+    def withdraw_from_account(self, account_number: str, amount: float,
+                             current_user_id: str, current_user_role: str) -> Tuple[bool, str, Optional[float]]:
         """Withdraw money from account if user has permission"""
         account = self.get_account_detail(account_number, current_user_id, current_user_role)
         if not account:
@@ -96,12 +83,12 @@ class BankingService:
             account_id=account.id,
             type="WITHDRAWAL",
             amount=amount,
-            balance_after=account.balance
+            balance_after=float(account.balance)
         )
         self.db.add(transaction)
         self.db.commit()
         
-        return True, "Withdrawal successful", account.balance
+        return True, "Withdrawal successful", float(account.balance)
 
     def get_account_statement(
         self,

@@ -22,11 +22,11 @@ async def get_current_user_profile(payload: dict = Depends(get_current_user), db
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return UserProfile(
-        name=user.name,
-        user_id=user.user_id,
-        role=user.role,
-        email=user.email,
-        phone=user.phone
+        name=str(user.name),
+        user_id=str(user.user_id),
+        role=str(user.role),
+        email=str(user.email) if user.email else None,
+        phone=str(user.phone) if user.phone else None
     )
 
 @router.get("/accounts", response_model=List[AccountSummary])
@@ -40,9 +40,9 @@ async def get_accounts(payload: dict = Depends(get_current_user), db: Session = 
 
     return [
         AccountSummary(
-            account_number=acc.account_number,
-            balance=acc.balance,
-            user_id=acc.owner.user_id
+            account_number=str(acc.account_number),
+            balance=float(acc.balance),
+            user_id=str(acc.owner.user_id)
         )
         for acc in accounts
     ]
@@ -72,10 +72,10 @@ async def get_account_detail(account_number: str, payload: dict = Depends(get_cu
     ]
 
     return AccountDetail(
-        account_number=account.account_number,
-        balance=account.balance,
-        user_id=account.owner.user_id,
-        user_name=account.owner.name,
+        account_number=str(account.account_number),
+        balance=float(account.balance),
+        user_id=str(account.owner.user_id),
+        user_name=str(account.owner.name),
         transactions=transactions
     )
 
