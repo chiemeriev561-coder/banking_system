@@ -1,24 +1,33 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-import os
 
-# SQLite database URL
-SQLALCHEMY_DATABASE_URL = "sqlite:///./banking.db"
+load_dotenv()
 
-# Create engine
-# connect_args={"check_same_thread": False} is required only for SQLite
+
+def _get_database_url() -> str:
+    """Return the configured PostgreSQL connection string."""
+    return os.getenv(
+        "DATABASE_URL",
+        "postgresql+psycopg://postgres:postgres@localhost:5432/banking_system",
+    )
+
+
+SQLALCHEMY_DATABASE_URL = _get_database_url()
+
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    pool_pre_ping=True,
 )
 
-# Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base class for models
 Base = declarative_base()
 
+
 async def get_db():
-    """Async dependency for getting DB session."""
+    """Async dependency for getting a database session."""
     db = SessionLocal()
     try:
         yield db

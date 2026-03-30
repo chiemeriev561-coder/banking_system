@@ -59,7 +59,7 @@ async def get_system_snapshot(db: Session = Depends(get_db)):
 async def root():
     """API root endpoint"""
     return {
-        "message": "Banking System API (SQLite)",
+        "message": "Banking System API (PostgreSQL)",
         "version": "1.0.0",
         "docs": "/docs",
         "redoc": "/redoc"

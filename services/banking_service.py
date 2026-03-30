@@ -163,7 +163,7 @@ class BankingService:
         auth_users = self.db.query(AuthDB).count()
 
         return {
-            'bank_name': "Secure Bank (SQLite)",
+            'bank_name': "Secure Bank (PostgreSQL)",
             'total_users': total_users,
             'total_accounts': total_accounts,
             'total_balance': total_balance,

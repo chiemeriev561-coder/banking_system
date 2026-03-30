@@ -1,6 +1,6 @@
 # Banking System API
 
-A REST API for a banking system with JWT authentication, user management, and account operations.
+A REST API for a banking system with JWT authentication, user management, and account operations backed by PostgreSQL.
 
 ## 🎯 Key Features
 - **REST API**: Full REST endpoints for banking operations
@@ -8,7 +8,7 @@ A REST API for a banking system with JWT authentication, user management, and ac
 - **User Management**: Register users with different roles (customer, teller, manager, admin)
 - **Account Operations**: Deposit, withdraw, check balance, view statements
 - **Admin Functions**: User management, account locking/unlocking, password resets
-- **Data Persistence**: JSON-based storage with automatic saving
+- **Data Persistence**: SQLAlchemy models stored in PostgreSQL
 
 ## 🔒 Security Features
 - **JWT Tokens**: Bearer token authentication
@@ -50,12 +50,17 @@ A REST API for a banking system with JWT authentication, user management, and ac
 pip install -r requirements.txt
 ```
 
-2. Start the API server:
+2. Set the database connection string in `.env`:
+```bash
+DATABASE_URL=postgresql+psycopg://victor:2323@localhost:5432/banking_db
+```
+
+3. Start the API server:
 ```bash
 uvicorn api.app:app --reload
 ```
 
-3. Access the API documentation at: http://localhost:8000/docs
+4. Access the API documentation at: http://localhost:8000/docs
 
 ## 🧪 Testing
 
