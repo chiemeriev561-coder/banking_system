@@ -11,7 +11,7 @@ from persistence.database import Base, get_db
 from persistence.models import UserDB, AccountDB, TransactionDB, AuthDB
 from services.banking_service import BankingService
 from services.auth_service import auth_service
-from auth import auth_system
+from core.auth import auth_system
 
 # Setup in-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite://"

@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Dict, Any
-from auth import require_auth, require_role as auth_require_role
+from core.auth import require_auth, require_role as auth_require_role
 
 security = HTTPBearer()
 

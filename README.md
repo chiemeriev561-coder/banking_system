@@ -66,7 +66,7 @@ uvicorn api.app:app --reload
 
 Run the test suite:
 ```bash
-pytest test_api.py -v
+pytest tests/test_api.py -v
 ```
 
 ## 📁 Project Structure
@@ -81,15 +81,24 @@ banking_system/
 │       ├── auth.py         # Authentication endpoints
 │       ├── accounts.py     # Banking operations
 │       └── admin.py        # Admin operations
+├── core/
+│   └── auth.py             # JWT and password utilities
+├── data/
+│   └── banking.db          # Legacy SQLite database artifact
+├── docs/
+│   └── TODO.md             # Project notes
+├── domain/
+│   ├── account.py          # Account domain model
+│   ├── bank.py             # Bank domain model
+│   └── user.py             # User domain model
 ├── services/
 │   ├── auth_service.py     # Authentication business logic
 │   └── banking_service.py  # Banking business logic
 ├── persistence/
 │   ├── database.py         # SQLAlchemy engine/session setup
 │   └── models.py           # Database models
-├── bank.py                 # Bank domain model
-├── account.py              # Account domain model
-├── user.py                 # User domain model
-├── auth.py                 # Authentication utilities
-└── test_api.py             # API tests
+├── scripts/
+│   └── migrate_json_to_sqlite.py  # Legacy JSON migration script
+└── tests/
+    └── test_api.py         # API tests
 ```

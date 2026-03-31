@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from persistence.models import UserDB, AuthDB
-from auth import auth_system, PasswordValidator
-from user import User
+from core.auth import auth_system, PasswordValidator
+from domain.user import User
 from typing import Optional, Tuple
 import datetime
 

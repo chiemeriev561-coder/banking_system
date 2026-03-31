@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from user import User
+from domain.user import User
 
 
 class Account:

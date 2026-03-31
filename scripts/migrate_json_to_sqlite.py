@@ -1,14 +1,16 @@
 import json
 import os
 import datetime
+from pathlib import Path
 from sqlalchemy.orm import Session
 from persistence.database import SessionLocal, engine, Base
 from persistence.models import UserDB, AccountDB, TransactionDB, AuthDB
 
-DATA_FILE = "data_store.json"
+BASE_DIR = Path(__file__).resolve().parents[1]
+DATA_FILE = BASE_DIR / "data_store.json"
 
 def migrate():
-    if not os.path.exists(DATA_FILE):
+    if not DATA_FILE.exists():
         print(f"❌ No {DATA_FILE} found. Nothing to migrate.")
         return
 
@@ -18,7 +20,7 @@ def migrate():
 
     # Load JSON data
     print(f"📂 Loading data from {DATA_FILE}...")
-    with open(DATA_FILE, 'r') as file:
+    with DATA_FILE.open('r') as file:
         data = json.load(file)
 
     db = SessionLocal()
