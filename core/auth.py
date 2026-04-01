@@ -4,6 +4,8 @@ import bcrypt
 import jwt
 import datetime
 import re
+import secrets
+import os
 from typing import Tuple, Dict, Any, Optional
 
 class PasswordValidator:
@@ -25,7 +27,16 @@ class PasswordValidator:
 class AuthSystem:
     """Authentication system using JWT and bcrypt"""
     def __init__(self):
-        self.SECRET_KEY = "super-secret-bank-key-123" # In production, use environment variable
+        # Use environment variable or generate a secure 32-byte key
+        self.SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+        if not self.SECRET_KEY:
+            # Generate a secure 32-byte key and warn user
+            self.SECRET_KEY = secrets.token_urlsafe(32)
+            print(f"WARNING: Generated new JWT secret key. Set JWT_SECRET_KEY environment variable to: {self.SECRET_KEY}")
+        
+        # Ensure key is at least 32 bytes for SHA256
+        if len(self.SECRET_KEY.encode('utf-8')) < 32:
+            raise ValueError("JWT_SECRET_KEY must be at least 32 bytes long for SHA256 security")
     
     def hash_password(self, password: str) -> str:
         return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
