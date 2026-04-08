@@ -14,9 +14,6 @@ from services.banking_service import BankingService
 from persistence.database import engine, Base, get_db
 from typing import Optional
 
-# Initialize database tables
-Base.metadata.create_all(bind=engine)
-
 # Create FastAPI app
 app = FastAPI(
     title="Banking System API",
