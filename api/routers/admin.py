@@ -11,7 +11,7 @@ from typing import List, Optional
 router = APIRouter()
 
 @router.get("/users", response_model=List[UserStatus])
-async def get_all_users(payload: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def get_all_users(payload: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Get all users with their auth status (admin only)"""
     users_status = []
 
@@ -31,7 +31,7 @@ async def get_all_users(payload: dict = Depends(require_admin), db: Session = De
     return users_status
 
 @router.post("/users/{user_id}/lock")
-async def lock_user(user_id: str, payload: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def lock_user(user_id: str, payload: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Lock user account (admin only)"""
     success, message = auth_service.lock_user(db, user_id)
     if not success:
@@ -40,7 +40,7 @@ async def lock_user(user_id: str, payload: dict = Depends(require_admin), db: Se
     return {"message": message}
 
 @router.post("/users/{user_id}/unlock")
-async def unlock_user(user_id: str, payload: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def unlock_user(user_id: str, payload: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Unlock user account (admin only)"""
     success, message = auth_service.unlock_user(db, user_id)
     if not success:
@@ -49,7 +49,7 @@ async def unlock_user(user_id: str, payload: dict = Depends(require_admin), db: 
     return {"message": message}
 
 @router.post("/users/{user_id}/reset-password", response_model=ResetPasswordResponse)
-async def reset_user_password(user_id: str, payload: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def reset_user_password(user_id: str, payload: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Reset user password and return temporary password (admin only)"""
     success, message, temp_password = auth_service.reset_user_password(db, user_id)
     if not success:

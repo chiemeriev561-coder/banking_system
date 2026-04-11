@@ -1,11 +1,10 @@
-# requirements.txt
-bcrypt>=4.0.0
-pyjwt>=2.6.0
-cryptography>=41.0.0
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-httpx>=0.28.0
-sqlalchemy>=2.0.0
-psycopg[binary]>=3.1.0
-python-dotenv>=1.0.0
-alembic
+bcrypt==5.0.0
+PyJWT==2.12.1
+cryptography==46.0.7
+fastapi==0.135.3
+uvicorn[standard]==0.44.0
+httpx==0.28.1
+SQLAlchemy==2.0.49
+psycopg[binary]==3.3.3
+python-dotenv==1.2.2
+alembic==1.18.4

@@ -1,55 +1,56 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, JSON
-from sqlalchemy.orm import relationship
+from sqlalchemy import String, Integer, Float, ForeignKey, DateTime, JSON
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from persistence.database import Base
 import datetime
+from typing import List, Optional
 
 class UserDB(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, unique=True, index=True)
-    name = Column(String)
-    role = Column(String, default="customer")
-    email = Column(String, nullable=True)
-    phone = Column(String, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[str] = mapped_column(String, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String)
+    role: Mapped[str] = mapped_column(String, default="customer")
+    email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationships
-    accounts = relationship("AccountDB", back_populates="owner")
-    auth = relationship("AuthDB", back_populates="user", uselist=False)
+    accounts: Mapped[List["AccountDB"]] = relationship("AccountDB", back_populates="owner")
+    auth: Mapped[Optional["AuthDB"]] = relationship("AuthDB", back_populates="user", uselist=False)
 
 class AccountDB(Base):
     __tablename__ = "accounts"
 
-    id = Column(Integer, primary_key=True, index=True)
-    account_number = Column(String, unique=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    balance = Column(Float, default=0.0)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    account_number: Mapped[str] = mapped_column(String, unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
+    balance: Mapped[float] = mapped_column(Float, default=0.0)
 
     # Relationships
-    owner = relationship("UserDB", back_populates="accounts")
-    transactions = relationship("TransactionDB", back_populates="account")
+    owner: Mapped["UserDB"] = relationship("UserDB", back_populates="accounts")
+    transactions: Mapped[List["TransactionDB"]] = relationship("TransactionDB", back_populates="account")
 
 class TransactionDB(Base):
     __tablename__ = "transactions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"))
-    type = Column(String) # DEPOSIT, WITHDRAWAL
-    amount = Column(Float)
-    balance_after = Column(Float)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    account_id: Mapped[int] = mapped_column(Integer, ForeignKey("accounts.id"))
+    type: Mapped[str] = mapped_column(String) # DEPOSIT, WITHDRAWAL
+    amount: Mapped[float] = mapped_column(Float)
+    balance_after: Mapped[float] = mapped_column(Float)
+    timestamp: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
 
     # Relationships
-    account = relationship("AccountDB", back_populates="transactions")
+    account: Mapped["AccountDB"] = relationship("AccountDB", back_populates="transactions")
 
 class AuthDB(Base):
     __tablename__ = "auth_credentials"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
-    password_hash = Column(String)
-    failed_attempts = Column(Integer, default=0)
-    locked_until = Column(DateTime, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), unique=True)
+    password_hash: Mapped[str] = mapped_column(String)
+    failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, nullable=True)
 
     # Relationships
-    user = relationship("UserDB", back_populates="auth")
+    user: Mapped["UserDB"] = relationship("UserDB", back_populates="auth")

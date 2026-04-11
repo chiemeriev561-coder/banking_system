@@ -22,7 +22,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-async def override_get_db():
+def override_get_db():
     db = TestingSessionLocal()
     try:
         yield db

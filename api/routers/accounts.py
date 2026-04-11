@@ -13,7 +13,7 @@ from typing import List, Optional
 router = APIRouter()
 
 @router.get("/me", response_model=UserProfile)
-async def get_current_user_profile(payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_current_user_profile(payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get current user profile"""
     user_id = payload['user_id']
     user = db.query(UserDB).filter(UserDB.user_id == user_id).first()
@@ -25,12 +25,12 @@ async def get_current_user_profile(payload: dict = Depends(get_current_user), db
         name=str(user.name),
         user_id=str(user.user_id),
         role=str(user.role),
-        email=str(user.email) if user.email else None,
-        phone=str(user.phone) if user.phone else None
+        email=str(user.email) if user.email is not None else None,
+        phone=str(user.phone) if user.phone is not None else None
     )
 
 @router.get("/accounts", response_model=List[AccountSummary])
-async def get_accounts(payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_accounts(payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get accounts accessible to current user"""
     banking_service = BankingService(db)
     user_id = payload['user_id']
@@ -48,7 +48,7 @@ async def get_accounts(payload: dict = Depends(get_current_user), db: Session = 
     ]
 
 @router.get("/accounts/{account_number}", response_model=AccountDetail)
-async def get_account_detail(account_number: str, payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_account_detail(account_number: str, payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get detailed account information"""
     banking_service = BankingService(db)
     user_id = payload['user_id']
@@ -80,7 +80,7 @@ async def get_account_detail(account_number: str, payload: dict = Depends(get_cu
     )
 
 @router.post("/accounts/{account_number}/deposit")
-async def deposit_to_account(
+def deposit_to_account(
     account_number: str,
     request: DepositWithdrawRequest,
     payload: dict = Depends(get_current_user),
@@ -104,7 +104,7 @@ async def deposit_to_account(
     }
 
 @router.post("/accounts/{account_number}/withdraw")
-async def withdraw_from_account(
+def withdraw_from_account(
     account_number: str,
     request: DepositWithdrawRequest,
     payload: dict = Depends(get_current_user),
@@ -128,7 +128,7 @@ async def withdraw_from_account(
     }
 
 @router.get("/accounts/{account_number}/statement", response_model=List[Transaction])
-async def get_account_statement(
+def get_account_statement(
     account_number: str,
     limit: int = 10,
     payload: dict = Depends(get_current_user),

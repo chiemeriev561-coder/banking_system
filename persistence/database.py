@@ -26,8 +26,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-async def get_db():
-    """Async dependency for getting a database session."""
+def get_db():
+    """Sync dependency for getting a database session."""
     db = SessionLocal()
     try:
         yield db

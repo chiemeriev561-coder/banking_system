@@ -13,7 +13,7 @@ from typing import Optional
 router = APIRouter()
 
 @router.post("/register", response_model=UserProfile)
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+def register(request: RegisterRequest, db: Session = Depends(get_db)):
     """Register a new user"""
     success, message, user = auth_service.register_user(
         db=db,
@@ -41,7 +41,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     )
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
+def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Login user and return access token"""
     success, message, token = auth_service.login_user(db, request.user_id, request.password)
 
@@ -54,7 +54,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     return LoginResponse(access_token=token, token_type="bearer")
 
 @router.post("/change-password")
-async def change_password(request: ChangePasswordRequest, payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def change_password(request: ChangePasswordRequest, payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Change current user's password"""
     user_id = payload['user_id']
 

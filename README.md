@@ -52,7 +52,7 @@ pip install -r requirements.txt
 
 2. Set the database connection string in `.env`:
 ```bash
-DATABASE_URL=postgresql+psycopg://victor:2323@localhost:5432/banking_db
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/banking_db
 ```
 
 3. Start the API server:
