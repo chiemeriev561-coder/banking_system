@@ -60,7 +60,10 @@ DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/banking_db
 uvicorn api.app:app --reload
 ```
 
-4. Access the API documentation at: http://localhost:8000/docs
+4. Access the API documentation at: https://banking-system-4y8w.onrender.com/docs (Live) or http://localhost:8000/docs (Local)
+
+## 🌐 Deployment
+The API is deployed on Render: [https://banking-system-4y8w.onrender.com](https://banking-system-4y8w.onrender.com)
 
 ## 🧪 Testing
 
